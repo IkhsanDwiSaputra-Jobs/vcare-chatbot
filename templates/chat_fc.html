@@ -64,9 +64,9 @@
 
         <!-- Area Input Chat -->
         <!-- [MODIFIKASI] Mengurangi padding di layar kecil -->
-        <div id="interactionArea" class="p-2 bg-white border-t border-slate-200">
+        <div id="interactionArea" class="p-2 bg-white border-t border-slate-200 width-[100x]">
             <div class="flex items-center space-x-2">
-                <input type="text" id="userInput" placeholder="Ketik pesan Anda..." class="flex-grow p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-shadow">
+                <input type="text" id="userInput" placeholder="Ketik pesan Anda..." class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-shadow">
                 <!-- [MODIFIKASI] Menambahkan flex-shrink-0 agar tombol tidak gepeng -->
                 <button id="sendButton" class="flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold p-3 rounded-lg transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
@@ -75,97 +75,50 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const chatBox = document.getElementById('chatBox');
-            const userInput = document.getElementById('userInput');
-            const sendButton = document.getElementById('sendButton');
+   <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const button = document.getElementById('find-clinics-btn');
+    const btnContent = document.getElementById('btn-content');
+    const loadingSpinner = document.getElementById('loading-spinner');
 
-            function appendMessage(text, sender, isHtml = false) {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('chat-bubble', sender === 'user' ? 'user-bubble' : 'bot-bubble');
-                if (isHtml) {
-                    messageDiv.innerHTML = text.replace(/\n/g, '<br>');
-                } else {
-                    messageDiv.textContent = text;
-                }
-                chatBox.appendChild(messageDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+    // 🧹 RESET ke kondisi semula setiap kali halaman dibuka
+    button.classList.remove('pointer-events-none', 'opacity-70');
+    btnContent.classList.remove('hidden');
+    loadingSpinner.classList.add('hidden');
 
-            function showLoadingIndicator() {
-                const loadingBubble = document.createElement('div');
-                loadingBubble.id = 'loading-bubble';
-                loadingBubble.classList.add('chat-bubble', 'bot-bubble');
-                loadingBubble.innerHTML = `
-                    <div class="flex items-center justify-center space-x-1.5">
-                        <div class="w-2 h-2 bg-slate-400 rounded-full dot-pulse"></div>
-                        <div class="w-2 h-2 bg-slate-400 rounded-full dot-pulse"></div>
-                        <div class="w-2 h-2 bg-slate-400 rounded-full dot-pulse"></div>
-                    </div>
-                `;
-                chatBox.appendChild(loadingBubble);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+    button.addEventListener('click', function(event) {
+        event.preventDefault();
 
-            function hideLoadingIndicator() {
-                const loadingBubble = document.getElementById('loading-bubble');
-                if (loadingBubble) {
-                    loadingBubble.remove();
-                }
-            }
+        // Nonaktifkan tombol & tampilkan loading
+        button.classList.add('pointer-events-none', 'opacity-70');
+        btnContent.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
 
-            function setInteractionLoading(isLoading) {
-                userInput.disabled = isLoading;
-                sendButton.disabled = isLoading;
-                sendButton.classList.toggle('opacity-50', isLoading);
-                sendButton.classList.toggle('cursor-not-allowed', isLoading);
-            }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
 
-            async function handleChatSubmit() {
-                const message = userInput.value.trim();
-                if (message === "") return;
+                // Arahkan ke route Flask baru dengan membawa koordinat
+                window.location.href = `/cari-faskes?lat=${lat}&lon=${lon}`;
+            }, function(error) {
+                alert('Gagal mendapatkan lokasi. Pastikan Anda mengizinkan akses lokasi di browser Anda.');
+                console.error("Error Code = " + error.code + " - " + error.message);
 
-                appendMessage(message, 'user');
-                userInput.value = "";
-                setInteractionLoading(true);
-                showLoadingIndicator();
-
-                try {
-                    const response = await fetch("{{ url_for('proses_chat_umum_endpoint') }}", {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: message })
-                    });
-                    
-                    hideLoadingIndicator();
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    appendMessage(data.bot_reply, 'bot', true);
-
-                } catch (error) {
-                    console.error("Error:", error);
-                    hideLoadingIndicator();
-                    appendMessage("Maaf, terjadi kesalahan koneksi. Silakan coba lagi nanti.", 'bot');
-                } finally {
-                    setInteractionLoading(false);
-                    userInput.focus();
-                }
-            }
-
-            sendButton.addEventListener('click', handleChatSubmit);
-            userInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleChatSubmit();
-                }
+                // Kembalikan tombol ke kondisi semula
+                button.classList.remove('pointer-events-none', 'opacity-70');
+                btnContent.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
             });
+        } else {
+            alert("Geolocation tidak didukung oleh browser ini.");
+            button.classList.remove('pointer-events-none', 'opacity-70');
+            btnContent.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+        }
+    });
+});
+</script>
 
-            userInput.focus();
-        });
-    </script>
 </body>
 </html>
