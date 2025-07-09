@@ -1,0 +1,12 @@
+Flask
+Flask-Login 
+Flask-SQLAlchemy 
+Flask-Bcrypt
+gunicorn
+psycopg2-binary
+dotenv
+requests
+google-search-results
+SQLAlchemy<2.0
+locust
+openai

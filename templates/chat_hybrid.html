@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - VCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #eef2f7; }
+        #chatBox { height: calc(100vh - 220px); }
+        @media (min-width: 768px) { #chatBox { height: calc(100vh - 240px); } }
+        .chat-bubble { max-width: 95%; padding: 10px 15px; border-radius: 18px; margin-bottom: 8px; line-height: 1.5; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .user-bubble { background-color: #10b981; color: white; margin-left: auto; border-bottom-right-radius: 5px; }
+        .bot-bubble { background-color: #ffffff; color: #374151; margin-right: auto; border-bottom-left-radius: 5px; }
+        .submit-button { transition: all 0.2s ease-in-out; }
+        .submit-button:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        #chatBox::-webkit-scrollbar { width: 8px; }
+        #chatBox::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #chatBox::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        #chatBox::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .checklist-item { transition: background-color 0.2s; }
+        .checklist-item:hover { background-color: #f0f9ff; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl bg-white shadow-xl rounded-lg flex flex-col overflow-hidden">
+        <header class="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 text-white flex items-center space-x-3">
+            <a href="{{ url_for('home') }}" class="text-xl hover:opacity-75 transition-opacity">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+            </a>
+            <img src="https://placehold.co/40x40/FFFFFF/10B981?text=VC%2B" alt="VCare Logo" class="w-10 h-10 rounded-full border-2 border-white">
+            <div>
+                <h1 class="text-xl font-semibold">{{ title }}</h1>
+                <p class="text-xs opacity-80">VCare Assistant - Hybrid Method</p>
+            </div>
+        </header>
+
+        <div id="chatBox" class="flex-grow p-4 space-y-3 overflow-y-auto bg-slate-100">
+            <!-- Pesan awal akan ditambahkan oleh JS -->
+        </div>
+
+        <div id="interactionArea" class="p-3 bg-white border-t border-slate-200">
+            <!-- Tombol submit akan ditambahkan oleh JS -->
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const interactionArea = document.getElementById('interactionArea');
+        const gejalaData = {{ gejala_list | tojson }};
+
+        function appendMessage(content, sender, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-bubble', sender === 'user' ? 'user-bubble' : 'bot-bubble');
+            if (isHtml) {
+                messageDiv.innerHTML = content;
+            } else {
+                const p = document.createElement('p');
+                p.textContent = content;
+                messageDiv.appendChild(p);
+            }
+            chatBox.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function displaySymptomChecklist() {
+            let checklistHtml = '<h4 class="text-md font-semibold mb-3 text-gray-700">Silakan pilih gejala yang Anda rasakan:</h4>';
+            checklistHtml += '<form id="gejalaForm">';
+            checklistHtml += '<div class="space-y-2">';
+
+            for (const kode in gejalaData) {
+                checklistHtml += `
+                    <label for="gejala-${kode}" class="checklist-item flex items-center p-3 bg-white rounded-lg border border-gray-200 cursor-pointer">
+                        <input id="gejala-${kode}" name="gejala" value="${kode}" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="ml-3 text-gray-800">${gejalaData[kode].nama}</span>
+                    </label>
+                `;
+            }
+
+            checklistHtml += '</div></form>';
+            appendMessage(checklistHtml, 'bot', true);
+        }
+
+        function displaySubmitButton() {
+            const submitButton = document.createElement('button');
+            submitButton.id = 'submitDiagnosisBtn';
+            submitButton.className = 'submit-button w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg shadow-md';
+            submitButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                Selesai & Lihat Hasil Diagnosa
+            `;
+            interactionArea.innerHTML = ''; // Hapus konten sebelumnya
+            interactionArea.appendChild(submitButton);
+
+            submitButton.addEventListener('click', handleDiagnosisSubmit);
+        }
+         async function handleGeneralChatSubmit() {
+            // Logika untuk chat umum (jika masih dipertahankan)
+            const message = generalUserInput.value.trim();
+            if (message === "") return;
+            appendMessageToChat(message, 'user');
+            generalUserInput.value = "";
+            setInteractionLoading(true);
+            try {
+                const response = await fetch("{{ url_for('proses_chat_umum_endpoint') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                appendMessageToChat(data.bot_reply, 'bot', true);
+            } catch (error) {
+                console.error("Error:", error);
+                appendMessageToChat("Maaf, ada masalah koneksi.", 'bot');
+            } finally {
+                setInteractionLoading(false);
+            }
+        }
+        async function handleDiagnosisSubmit() {
+            const form = document.getElementById('gejalaForm');
+            const formData = new FormData(form);
+            const selectedGejala = formData.getAll('gejala');
+
+            if (selectedGejala.length === 0) {
+                appendMessage("Mohon pilih setidaknya satu gejala untuk melanjutkan.", 'bot');
+                return;
+            }
+
+            // Tampilkan gejala yang dipilih oleh user
+            let userChoiceText = "Saya mengalami gejala berikut: <ul class='list-disc list-inside mt-2'>";
+            selectedGejala.forEach(kode => {
+                userChoiceText += `<li>${gejalaData[kode].nama}</li>`;
+            });
+            userChoiceText += "</ul>";
+            appendMessage(userChoiceText, 'user', true);
+
+            // Nonaktifkan tombol
+            const submitButton = document.getElementById('submitDiagnosisBtn');
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Menganalisis...';
+            submitButton.classList.add('opacity-50');
+
+            try {
+                const response = await fetch("{{ url_for('proses_diagnosa_endpoint') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+                const results = await response.json();
+
+                if (results.error) {
+                    appendMessage(`Terjadi kesalahan: ${results.error}`, 'bot');
+                    return;
+                }
+
+                // Tampilkan hasil diagnosa
+                let resultHtml = '<h4 class="text-md font-semibold mb-3 text-gray-700">Berikut adalah hasil diagnosa awal Anda:</h4>';
+                if (results.length > 0 && results[0].similarity > 0) {
+                     results.forEach(res => {
+                        resultHtml += `
+                            <div class="mb-2">
+                                <div class="flex justify-between font-medium">
+                                    <span>${res.nama_penyakit}</span>
+                                    <span>${res.similarity}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div class="bg-gradient-to-r from-teal-400 to-emerald-500 h-2.5 rounded-full" style="width: ${res.similarity}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    resultHtml += `<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                        <strong>Kesimpulan:</strong> Kemungkinan terbesar Anda menderita <strong>${results[0].nama_penyakit}</strong>.
+                        <br><br><strong>Penting:</strong> Ini hanya diagnosa awal. Segera konsultasikan dengan dokter untuk penanganan lebih lanjut.
+                    </div>`;
+                } else {
+                    resultHtml += '<p>Berdasarkan gejala yang Anda pilih, tidak ditemukan penyakit yang cocok dalam basis data kami.</p>';
+                }
+
+                appendMessage(resultHtml, 'bot', true);
+                interactionArea.innerHTML = `<a href="{{ url_for('home') }}" class="submit-button block text-center w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg">Kembali ke Beranda</a>`;
+
+            } catch (error) {
+                console.error("Error:", error);
+                appendMessage("Maaf, terjadi kesalahan koneksi saat memproses diagnosa.", 'bot');
+            }
+        }
+
+        // --- Inisialisasi Chat ---
+        document.addEventListener('DOMContentLoaded', () => {
+            appendMessage("Selamat datang di VCare! Saya akan membantu Anda melakukan diagnosa awal penyakit lambung.", 'bot');
+            setTimeout(() => {
+                displaySymptomChecklist();
+                displaySubmitButton();
+            }, 1000); // Beri jeda seolah-olah bot sedang mengetik
+        });
+    </script>
+</body>
+</html>
